@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>青青竹路线推荐器</title>
+<style>
+  :root {
+    --green: #2d6a4f;
+    --green-light: #d8f3dc;
+    --green-pale: #f0faf3;
+    --bamboo: #95c93d;
+    --warn: #e07c24;
+    --hard: #c73e3a;
+    --text: #1b1b1b;
+    --text-light: #6b6b6b;
+    --bg: #f9faf8;
+    --card: #ffffff;
+    --border: #e5e7e4;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 40%, #40916c 100%);
+    color: white; padding: 32px 20px 28px; text-align: center;
+  }
+  .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .header .subtitle { font-size: 14px; opacity: 0.85; }
+  .header .count { display: inline-block; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-top: 10px; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  .filter-card {
+    background: var(--card); border-radius: var(--radius); padding: 24px;
+    box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid var(--border);
+  }
+  .filter-card h2 { font-size: 17px; color: var(--green); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .filter-card h2 svg { width: 20px; height: 20px; }
+
+  .age-section { margin-bottom: 20px; }
+  .age-section label { font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px; }
+  .age-display { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .age-display input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--green); height: 6px; }
+  .age-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--green-pale); color: var(--green); padding: 6px 14px; border-radius: 20px; font-size: 15px; font-weight: 700; min-width: 72px; justify-content: center; }
+  .age-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .age-tag { padding: 3px 10px; border-radius: 12px; font-size: 12px; background: #f0f0f0; color: var(--text-light); cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+  .age-tag:hover { border-color: var(--green); color: var(--green); }
+  .age-tag.active { background: var(--green-light); color: var(--green); font-weight: 600; border-color: var(--green); }
+
+  .chip-section { margin-bottom: 16px; }
+  .chip-section label { font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 7px 16px; border-radius: 20px; font-size: 13px; background: #f3f4f3; color: var(--text-light); cursor: pointer; border: 1.5px solid transparent; transition: all 0.15s; user-select: none; }
+  .chip:hover { border-color: var(--green); color: var(--green); }
+  .chip.active { background: var(--green-light); color: var(--green); font-weight: 600; border-color: var(--green); }
+  .chip .emoji { margin-right: 3px; }
+
+  .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .results-header h2 { font-size: 17px; color: var(--green); }
+  .results-count { font-size: 13px; color: var(--text-light); }
+  .results-count strong { color: var(--green); }
+
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--text-light); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 15px; }
+
+  .route-list { display: grid; gap: 12px; }
+  .route-card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+    transition: all 0.2s; cursor: pointer; overflow: hidden;
+  }
+  .route-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-color: #c0c8c2; }
+  .route-card .rtop {
+    padding: 18px 20px; display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 12px;
+  }
+  .route-card .name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .route-card .name .region { font-size: 12px; color: var(--text-light); font-weight: 400; }
+  .route-card .difficulty { font-size: 13px; font-weight: 600; white-space: nowrap; padding: 3px 10px; border-radius: 12px; }
+  .diff-easy { background: #e8f5e9; color: #2d6a4f; }
+  .diff-medium { background: #fff3e0; color: #e07c24; }
+  .diff-hard { background: #ffebee; color: #c73e3a; }
+  .route-card .meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-light); margin-top: 4px; }
+  .route-card .meta span { display: flex; align-items: center; gap: 4px; }
+  .route-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .route-card .tag { padding: 2px 10px; border-radius: 10px; font-size: 11px; background: var(--green-pale); color: var(--green); }
+  .route-card .tag.summer { background: #e3f2fd; color: #1565c0; }
+  .route-card .tag.warn { background: #fff3e0; color: #e07c24; }
+  .route-card .expand-hint { font-size: 12px; color: var(--text-light); margin-top: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+  /* Detail section */
+  .route-card .detail {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s ease;
+    border-top: 1px solid transparent;
+  }
+  .route-card.expanded .detail {
+    max-height: 600px; border-top-color: var(--border);
+  }
+  .detail-inner { padding: 0 20px 18px; }
+  .detail-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; line-height: 1.65; }
+  .detail-row .dlbl { color: var(--text-light); white-space: nowrap; min-width: 52px; font-weight: 500; }
+  .detail-row .dval { color: var(--text); }
+  .detail-row a { color: var(--green); text-decoration: underline; font-size: 12px; }
+  .detail-row a:hover { color: #1b4332; }
+
+  .season-banner {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
+    font-size: 13px; color: #1565c0; display: flex; align-items: center; gap: 10px;
+  }
+  .season-banner .icon { font-size: 22px; }
+
+  .badge-new { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 8px; font-size: 11px; }
+  .badge-done { background: var(--green-pale); color: var(--green); padding: 2px 8px; border-radius: 8px; font-size: 11px; }
+
+  .location-tip {
+    font-size: 12px; color: #888; margin-top: 6px; padding: 6px 10px;
+    background: #f5f5f5; border-radius: 6px;
+  }
+  @media (max-width: 600px) {
+    .container { padding: 12px; }
+    .filter-card { padding: 18px; }
+    .route-card .rtop { padding: 14px 16px; }
+    .detail-inner { padding: 0 16px 14px; }
+    .route-card .meta { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎒 青青竹路线推荐器</h1>
+  <div class="subtitle">输入孩子的年龄和偏好，自动匹配适合的徒步路线 · 点击卡片查看详细介绍</div>
+  <div class="count">120条路线 · 已组织37条 · 持续更新中</div>
+</div>
+
+<div class="container">
+
+  <div class="season-banner" id="seasonBanner">
+    <span class="icon" id="seasonIcon">🌊</span>
+    <span id="seasonText">6月盛夏 · 溯溪玩水路线上线！都林山、井空里、碧坞龙潭清凉推荐</span>
+  </div>
+
+  <div class="filter-card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      筛选条件
+    </h2>
+
+    <div class="age-section">
+      <label>孩子年龄</label>
+      <div class="age-display">
+        <input type="range" id="ageSlider" min="3" max="14" value="7" step="1">
+        <span class="age-badge" id="ageBadge">7 岁</span>
+      </div>
+      <div class="age-tags" id="ageTags">
+        <span class="age-tag" data-age="3-5">3-5岁</span>
+        <span class="age-tag" data-age="5-7">5-7岁</span>
+        <span class="age-tag active" data-age="7-9">7-9岁</span>
+        <span class="age-tag" data-age="9-12">9-12岁</span>
+        <span class="age-tag" data-age="12+">12岁+</span>
+      </div>
+    </div>
+
+    <div class="chip-section">
+      <label>路线偏好（可多选）</label>
+      <div class="chips" id="prefChips">
+        <span class="chip" data-pref="water"><span class="emoji">💧</span>溯溪玩水</span>
+        <span class="chip" data-pref="wild"><span class="emoji">🪨</span>野路攀石</span>
+        <span class="chip" data-pref="easy"><span class="emoji">🌿</span>轻松休闲</span>
+        <span class="chip" data-pref="culture"><span class="emoji">📜</span>古道人文</span>
+        <span class="chip" data-pref="view"><span class="emoji">🏔️</span>山脊视野</span>
+        <span class="chip" data-pref="forest"><span class="emoji">🌲</span>森林氧吧</span>
+      </div>
+    </div>
+
+    <div class="chip-section">
+      <label>城市地区</label>
+      <div class="chips" id="cityChips">
+        <span class="chip active" data-city="">🌏 全部</span>
+        <span class="chip" data-city="hz">🏙️ 杭州市区</span>
+        <span class="chip" data-city="fy">🏔️ 富阳</span>
+        <span class="chip" data-city="la">🌲 临安</span>
+        <span class="chip" data-city="xs">⛰️ 萧山</span>
+        <span class="chip" data-city="hu">🌊 湖州</span>
+        <span class="chip" data-city="ca">🌄 淳安</span>
+        <span class="chip" data-city="tl">🏘️ 桐庐</span>
+        <span class="chip" data-city="sx">🏛️ 诸暨</span>
+        <span class="chip" data-city="nb">🦀 宁波</span>
+      </div>
+    </div>
+
+    <div class="chip-section">
+      <label>其他条件</label>
+      <div class="chips" id="flagChips">
+        <span class="chip" data-flag="done"><span class="emoji">✅</span>青青竹已组织</span>
+        <span class="chip" data-flag="new"><span class="emoji">🆕</span>只看新路线</span>
+        <span class="chip" data-flag="near"><span class="emoji">📍</span>车程1h内</span>
+        <span class="chip" data-flag="summer"><span class="emoji">☀️</span>夏天友好</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-header">
+    <h2>推荐结果</h2>
+    <span class="results-count">匹配到 <strong id="matchCount">0</strong> 条路线</span>
+    <div id="locationTip" class="location-tip">📍 车程以文理小学（杭州三墩）为基准，实际时间因出发地不同会有差异</div>
+  </div>
+
+  <div id="results" class="route-list"></div>
+</div>
+
+<script>
+// ========== DATA ==========
+const routes = [
+  // ===== 新手入门 =====
+  {n:"吴山广场-太子湾公园",d:"10km",cl:"450m",a:"西湖区",ct:"hz",diff:1,cat:"入门",ft:["轻松","城市山林","湖景"],car:"0.5h",st:"done",s:true,
+   intro:"从吴山广场出发，穿行西湖群山的城市山林步道，终点落在太子湾公园。全程有铺装路面和土路交错，爬升温和，适合入门家庭。沿途可俯瞰西湖全景。",
+   season:"春秋最佳，夏季树荫充足也可走，冬季注意台阶湿滑",
+   note:"城市路线，公交地铁可达，无需自驾。太子湾终点有多条公交回起点",
+   url:"https://mp.weixin.qq.com/s/7DXAAaXVciPVLLGGlP7GOg"},
+  {n:"上天竺-云栖竹径",d:"7km",cl:"300m",a:"西湖区",ct:"hz",diff:1,cat:"入门",ft:["轻松","竹林","寺庙"],car:"0.5h",st:"done",s:true,
+   intro:"从天竺路寺庙群出发，穿越茂密竹林山径，抵达云栖竹径。一路竹影婆娑，禅意十足。是西湖群山中绿荫最浓密的路线之一，夏天走也凉爽。",
+   season:"四季皆宜，夏天竹林遮阴效果一流，秋天桂花季另有风味",
+   note:"可从上天竺法喜寺门口出发，终点云栖竹径有公交站",
+   url:"https://mp.weixin.qq.com/s/z-q-ixwioD2aSjSN7QUbQA"},
+  {n:"章里古道小环线",d:"8km",cl:"400m",a:"安吉",ct:"hu",diff:2,cat:"入门",ft:["古道","瀑布","岩洞"],car:"1-1.3h",st:"done",s:true,
+   intro:"安吉经典的入门古道，有瀑布、天然岩洞、石板古道三件套。路线清晰好走，爬升分散不集中，亲子友好。岩洞是孩子们最爱的打卡点。",
+   season:"春夏秋均可，夏天瀑布水量大更有看头，雨后瀑布更壮观",
+   note:"安吉方向，车程适中。有明确停车场",
+   url:"https://mp.weixin.qq.com/s/l6ocV42WHHTcWfWzwl3EKA"},
+  {n:"西天目山大树王景区",d:"5.5km",cl:"850m",a:"临安",ct:"la",diff:2,cat:"入门",ft:["森林","古树","景区步道"],car:"1.2-1.5h",st:"done",s:false,
+   intro:"天目山自然保护区核心段，千年古柳杉群是最大看点，大树王需数人合抱。全程景区石阶步道，安全系数最高。有缆车可选，体力不足可坐缆车下山。",
+   season:"春秋最佳（天目秋色绝美），夏天森林遮阴也凉快，需买景区门票",
+   note:"有门票。台阶较多，膝盖不好的注意。亲子入门首选之一",
+   url:"https://mp.weixin.qq.com/s/yyd1vnn1eu5T--7J4yJo8g"},
+  {n:"萧山云岭古道",d:"9km",cl:"550m",a:"萧山",ct:"xs",diff:2,cat:"入门",ft:["古道","竹林"],car:"0.8-1h",st:"done",s:true,
+   intro:"萧山方向人少景好的古道，竹林为主，间有溪流。爬升均匀不陡，适合5-7岁以上孩子。全程基本在竹林里穿行，夏天也不晒。",
+   season:"春夏秋均可，夏天竹林遮阴效果好",
+   note:"萧山方向，车程近。导航云岭古道起点即可",
+   url:"https://mp.weixin.qq.com/s/FF3oO57LZ5mzwzyu7Ek23g"},
+  {n:"半山国家森林公园环线",d:"7.5km",cl:"400m",a:"拱墅区",ct:"hz",diff:1,cat:"入门",ft:["轻松","城市公园","森林"],car:"0.5h",st:"done",s:true,
+   intro:"杭州市区内的国家森林公园，望宸阁可眺望城北全景。游步道完善，带娃无压力。春季梅花盛开时特别美。最亲民的入门路线。",
+   season:"四季皆宜，春天梅花樱花季最美",
+   note:"公交地铁可达，自驾停车方便，市区首选入门线",
+   url:"https://mp.weixin.qq.com/s/zgGP2ZLHmCucPLxpj9sxTA"},
+  {n:"皋亭山环线",d:"9km",cl:"450m",a:"上城区",ct:"hz",diff:2,cat:"入门",ft:["轻松","城市山"],car:"0.7h",st:"done",s:true,
+   intro:"杭州城北的城市山林，皋亭山以桃花闻名（春季千亩桃花）。步道完善，有多个观景平台。重阳登高传统路线。",
+   season:"春季桃花季最佳，夏秋也不错，市区近便",
+   note:"春季桃花季人较多，建议错峰。自驾停车方便",
+   url:""},
+  {n:"安吉南坞古道环线",d:"7km",cl:"500m",a:"安吉",ct:"hu",diff:2,cat:"入门",ft:["古道","竹林","溪流"],car:"1-1.2h",st:"done",s:true,
+   intro:"安吉方向偏小众的古道，竹林+溪流组合。比章里古道更安静，路况以土路和石板为主。有溪流段可停下来玩水。",
+   season:"春夏秋均可，夏天沿溪段凉爽",
+   note:"安吉方向，车程约1h出头。导航南坞村",
+   url:""},
+
+  // ===== 进阶体验 =====
+  {n:"莫干山葛岭小环线",d:"5km",cl:"500m",a:"德清",ct:"hu",diff:3,cat:"进阶",ft:["野路","攀石","竹林"],car:"1-1.2h",st:"done",s:false,
+   intro:"莫干山后山的野趣路线，距离短但爬升集中，有攀石路段需要手脚并用。竹林和巨石交错，是孩子练胆的好地方。青苔石阶有年代感。",
+   season:"春秋最佳，夏天闷热需早出发，雨天石阶滑慎行",
+   note:"5km看似短但爬升500m不轻松，建议7岁以上有基础的孩子",
+   url:"https://mp.weixin.qq.com/s/gPinfhysIFXkT8fW8URnZA"},
+  {n:"富阳弘一古道小环线",d:"6.5km",cl:"500m",a:"富阳",ct:"fy",diff:3,cat:"进阶",ft:["古道","溪流","森林"],car:"1-1.2h",st:"done",s:true,
+   intro:"与弘一法师（李叔同）有关的古道，有山林、溪流、古寺遗址。人文与自然融合的一条线，走起来不急不躁，适合喜欢有故事的路线。",
+   season:"春秋最佳，夏天溪流段凉爽",
+   note:"富阳方向，车程适中。有溪流段可玩水",
+   url:"https://mp.weixin.qq.com/s/Fk3HcMDDawZ-hacW-pQWew"},
+  {n:"谢圣岭古道环线",d:"8km",cl:"600m",a:"富阳",ct:"fy",diff:3,cat:"进阶",ft:["古道","历史","西岩山延伸"],car:"1-1.2h",st:"done",s:true,
+   intro:"富阳经典古道，石板路保存完好，现可延伸至西岩山石林（喀斯特地貌）。法藏寺可吃斋饭（10元/人），是这条线的一大特色体验。",
+   season:"春秋最佳，夏季上午出发较早可避开日晒",
+   note:"法藏寺斋饭约11:30开饭，掐好时间。可与西岩山联走（+4km）",
+   url:"https://mp.weixin.qq.com/s/wWlDVkV7TN2UTNDalZ6GIg"},
+  {n:"径山古道大环线",d:"11km",cl:"500m",a:"余杭",ct:"hz",diff:3,cat:"进阶",ft:["古道","禅寺","茶园"],car:"0.8-1h",st:"done",s:true,
+   intro:"径山寺是日本茶道发源地，古道石板路千年历史。山顶径山寺可吃素斋，茶园茶田景观开阔。是最有禅意的杭州周边古道之一。",
+   season:"春秋最佳（茶田新绿季尤其好看），夏天有树荫但部分路段晒",
+   note:"径山寺需门票（古道不收）。山顶斋饭好吃，建议安排中午到达",
+   url:"https://mp.weixin.qq.com/s/tLHLFeLEORlQBYsB1XBSmQ"},
+  {n:"如意尖小环线",d:"8.5km",cl:"650m",a:"西湖区",ct:"hz",diff:3,cat:"进阶",ft:["野路","攀石","山脊"],car:"0.6h",st:"done",s:false,
+   intro:"西湖群山中野趣较浓的一条线，有土路陡坡和攀爬段，山脊视野开阔。对比市区其他路线更'野'，适合想进阶的亲子家庭。",
+   season:"春秋最佳，夏天山脊暴晒需早出发带足水，冬季山顶风大",
+   note:"野路段注意脚下，下雨后泥泞慎行。建议8岁以上",
+   url:"https://mp.weixin.qq.com/s/-ihfNI11sS5E2LatcnRZaQ"},
+  {n:"娘娘山环线",d:"7.5km",cl:"550m",a:"余杭",ct:"hz",diff:3,cat:"进阶",ft:["森林","山脊"],car:"0.8h",st:"done",s:true,
+   intro:"余杭方向一条节奏很好的环线，前半段林荫土路缓缓上，登顶后山脊视野开阔，下山穿竹林。整体不累但该有的都有。",
+   season:"春秋最佳，夏季林荫段多较凉快",
+   note:"余杭方向，车程近。路线清晰不易迷路",
+   url:"https://tcniq5agdtns.feishu.cn/docx/UwP2d4WxZo3mP9xdsmWc2EurnYe"},
+  {n:"东明山环线",d:"7.5km",cl:"450m",a:"余杭",ct:"hz",diff:2,cat:"进阶",ft:["森林","古道","轻松"],car:"0.7h",st:"done",s:true,
+   intro:"余杭东明山森林公园内环线，以森林古道为主，夏天林荫浓密。爬升不大，路线清晰，是很舒服的入门进阶过渡线。",
+   season:"春夏秋均可，夏天森林遮阴效果好",
+   note:"余杭方向，车程近。适合作为进阶第一站",
+   url:"https://mp.weixin.qq.com/s/O8mGlmmGKLyI7SoYbPt3RA"},
+  {n:"莫干山蒋公古道环线",d:"11km",cl:"580m",a:"德清",ct:"hu",diff:3,cat:"进阶",ft:["古道","历史","民国建筑"],car:"1-1.3h",st:"done",s:true,
+   intro:"莫干山历史最悠久的主干道，蒋介石、杜月笙等民国名人都走过。沿途可看到民国老别墅群、剑池瀑布。文化和山野兼得。",
+   season:"春秋最佳，夏天莫干山比市区凉快3-5度，但暑假游客多",
+   note:"莫干山景区需门票（提前网上买便宜）。暑假周末人多，建议平时去",
+   url:"https://mp.weixin.qq.com/s/wCqOGCUYMBpkTckSYjd3Mg"},
+  {n:"午潮山豆腐皮小环线",d:"9km",cl:"700m",a:"西湖区",ct:"hz",diff:3,cat:"进阶",ft:["野路","森林"],car:"0.5h",st:"done",s:true,
+   intro:"西湖区西部的野趣路线，得名于山下豆腐皮作坊。路线以土路为主，森林覆盖率极高。有一定的爬升挑战，但距离适中。",
+   season:"春秋最佳，夏天森林遮阴好",
+   note:"豆腐皮古道白龙潭段与西山白龙潭有重叠，注意不要混淆",
+   url:"https://mp.weixin.qq.com/s/HnEWOo7tLsRT_2sq8Oi-2A"},
+  {n:"萧绍古道大环线",d:"10.5km",cl:"550m",a:"萧山",ct:"xs",diff:3,cat:"进阶",ft:["古道","历史","峡谷"],car:"0.8-1h",st:"done",s:true,
+   intro:"连接萧山和绍兴两地的历史古道，峡谷段落有溪流相伴。石板古道保存完整，沿途有古亭古桥。距离偏长但爬升温和。",
+   season:"春秋最佳，夏天峡谷段较凉快",
+   note:"10.5km对低龄孩子稍长，建议7岁以上",
+   url:"https://tcniq5agdtns.feishu.cn/docx/KgLcdHx04oH8tPxCDCqcKoronMe"},
+  {n:"东明山九度岭古道环线",d:"10km",cl:"700m",a:"余杭",ct:"hz",diff:3,cat:"进阶",ft:["古道","野路","森林"],car:"0.7h",st:"done",s:true,
+   intro:"东明山的升级版，加了九度岭古道段。爬升比普通东明山环线多出250m，土路+古道结合，更有挑战性。森林覆盖好。",
+   season:"春秋最佳，夏天森林遮阴可走",
+   note:"比东明山环线多2.5km和250m爬升，进阶版",
+   url:"https://mp.weixin.qq.com/s/7jGKmjJShamAoKtaDkswGw"},
+  {n:"西湖群山富贵小马线",d:"13km",cl:"700m",a:"西湖区",ct:"hz",diff:3,cat:"进阶",ft:["山脊","湖景","长线"],car:"0.5h",st:"done",s:false,
+   intro:"西湖群山经典长线穿越，串联多个山头，全程在山脊线上走，西湖和钱塘江双景尽收。是检验孩子徒步能力的一道标杆线。",
+   season:"春秋冬季最佳，夏天山脊暴晒不推荐",
+   note:"距离长，需带足补给。建议9岁以上有一定基础的孩子",
+   url:"https://mp.weixin.qq.com/s/RsNGKhrLK5_9_7iNnWU4yw"},
+  {n:"青山村经典10公里环线",d:"10km",cl:"650m",a:"余杭",ct:"hz",diff:3,cat:"进阶",ft:["乡村","竹林","水库"],car:"0.8h",st:"done",s:true,
+   intro:"余杭青山村周边环线，是乡村与山野结合的典范。有水库、竹林、茶田、村庄，路线变化丰富不单调。村民友好，可顺路买土特产。",
+   season:"春夏秋均可，春天油菜花季特别美",
+   note:"青山村本身也是网红村，可结合村内咖啡馆作为休整点",
+   url:"https://mp.weixin.qq.com/s/voqksZ-JJu_0AN4UTkafwA"},
+  {n:"杨家牌楼-云栖竹径",d:"12km",cl:"650m",a:"西湖区",ct:"hz",diff:3,cat:"进阶",ft:["山脊","竹林","长线"],car:"0.5h",st:"done",s:false,
+   intro:"从杨家牌楼上山，穿越西湖群山山脊线，最终汇入云栖竹径。前半段山脊视野好，后半段竹林穿行。西湖群山中距离最适中的南北穿越线。",
+   season:"春秋冬季最佳，夏天山脊暴晒",
+   note:"点对点穿越非环线，需考虑终点回起点的交通",
+   url:"https://mp.weixin.qq.com/s/92sqOaQqL19OSlt4MMTF6w"},
+  {n:"富阳浮云岭环线",d:"8km",cl:"600m",a:"富阳",ct:"fy",diff:3,cat:"进阶",ft:["山脊","视野开阔"],car:"1.2h",st:"done",s:false,
+   intro:"富阳的'小武功山'，山顶大片草甸视野极开阔，天气好时能看到富春江。山脊线走得身心舒畅。是富阳方向视野最好的路线之一。",
+   season:"春秋最佳，夏天山脊草甸暴晒不推荐，冬季草黄有别样美",
+   note:"夏天暴晒严重，只适合春秋。山顶风大带外套",
+   url:"https://mp.weixin.qq.com/s/Ow_OgXOLvm4GxFPAdDoj6g"},
+  {n:"鸬鸟山罗窑坞环线",d:"8.6km",cl:"800m",a:"余杭",ct:"hz",diff:3,cat:"进阶",ft:["野路","山脊","视野"],car:"1-1.2h",st:"done",s:false,
+   intro:"鸬鸟山是余杭最高峰之一，罗窑坞起点的环线是经典走法。爬升较大但路线成熟，登顶后视野极佳。山顶有窑洞遗址。",
+   season:"春秋最佳，4-5月杜鹃花海盛放，夏天山脊段晒",
+   note:"800m爬升对入门偏大，建议8岁以上。杜鹃花季人多",
+   url:"https://mp.weixin.qq.com/s/Xp49n1jQxnQle8N1dJpVGQ"},
+
+  // ===== 挑战型 =====
+  {n:"杏梅尖小环线",d:"13km",cl:"1061m",a:"富阳",ct:"fy",diff:4,cat:"挑战",ft:["野路","攀石","高爬升"],car:"1.2-1.5h",st:"done",s:false,
+   intro:"富阳龙门山主峰（海拔1068m），杭州周边千米级山峰代表。有碎石坡、攀爬段、高山草甸，是青少年进阶到挑战的分水岭路线。登顶成就感极强。",
+   season:"春秋最佳，避开夏天暴晒和冬天冰冻",
+   note:"必须10岁以上有丰富经验，1061m爬升是硬指标。冬天山顶可能有冰",
+   url:"https://mp.weixin.qq.com/s/SHhxl8XM10nVqPcUYW4-ng"},
+  {n:"吴越古道环线",d:"15km",cl:"860m",a:"临安",ct:"la",diff:4,cat:"挑战",ft:["古道","历史","千顷关"],car:"1.5-1.8h",st:"done",s:false,
+   intro:"吴越国时期的军事古道，石板路千年不毁。途经千顷关遗址和浙西天池，历史厚重感拉满。天池段开阔壮观，是真正的'行走的历史课'。",
+   season:"春秋最佳，5月天池边杜鹃盛开，秋天红叶季。夏天天池段晒",
+   note:"距离长，车程远（1.5h+）。一天往返较赶，建议安排全天。10岁以上",
+   url:"https://mp.weixin.qq.com/s/VLx7sG480o0UFOOJ-wT7RQ"},
+  {n:"汤公山环线",d:"10km",cl:"900m",a:"临安",ct:"la",diff:4,cat:"挑战",ft:["山脊","野路","视野好"],car:"1.5-1.8h",st:"done",s:false,
+   intro:"临安方向的高山草甸型路线，山脊视野极开阔。爬升集中在前半段，后半段山脊漫步。与鸬鸟山类似但更野更难。",
+   season:"春秋最佳，4-5月杜鹃花季最美",
+   note:"5月底后杜鹃已谢，不建议以杜鹃为卖点推荐。爬升大",
+   url:"https://mp.weixin.qq.com/s/wxvLi28oeow0_L74O0aQ-Q"},
+  {n:"天目双尖小环线",d:"10.5km",cl:"900m",a:"临安",ct:"la",diff:4,cat:"挑战",ft:["野路","森林","高爬升"],car:"1.5h",st:"done",s:false,
+   intro:"连登天目山脉两座尖峰，原始森林路段野趣十足。人少安静，真正深度体验天目山野性的一面。比景区路线有挑战得多。",
+   season:"春秋最佳，夏天森林遮阴但湿度大",
+   note:"野路为主，需一定野外经验。车程1.5h",
+   url:"https://mp.weixin.qq.com/s/oF_caPCWMkqdhsp9hecY6g"},
+  {n:"西湖半标毅线",d:"17km",cl:"1060m",a:"西湖区",ct:"hz",diff:4,cat:"挑战",ft:["长线","山脊","毅力"],car:"0.5h",st:"done",s:false,
+   intro:"西湖群山经典'标毅线'的半程版，贯穿西湖群山主要山头。检验耐力和毅力的标杆路线。杭州市区出发，无车程负担。",
+   season:"春秋冬最佳，夏天太热不推荐",
+   note:"17km对成年人都不轻松，仅适合12岁以上经验丰富的孩子",
+   url:"https://mp.weixin.qq.com/s/_kbTkvsZK5mA9sD0T1gVjg"},
+  {n:"东天目山大环线",d:"13km",cl:"1200m",a:"临安",ct:"la",diff:5,cat:"挑战",ft:["野路","高爬升","原始森林"],car:"1.5h",st:"done",s:false,
+   intro:"东天目山原始森林穿越，1200m爬升是路线库中最高之一。人迹罕至，真正的大山体验。树龄数百年的原始森林令人震撼。",
+   season:"春秋最佳，需全天安排",
+   note:"仅适合12岁以上老手。爬升极大，需充足体能准备",
+   url:"https://mp.weixin.qq.com/s/fpSpFN0NQ1Gfrq9M7J5LDw"},
+  {n:"午潮山小金刚环线",d:"11km",cl:"1080m",a:"西湖区",ct:"hz",diff:5,cat:"挑战",ft:["野路","攀石","高强度"],car:"0.5h",st:"done",s:false,
+   intro:"午潮山最硬核的走法，以连续陡坡和攀爬著称。得名'小金刚'不是开玩笑的——全程高强度，对体能和技术都有要求。登顶后可远眺钱塘江。",
+   season:"春秋冬最佳，夏天闷热+高强度=不推荐",
+   note:"仅适合12岁以上老手，不是什么'小'金刚",
+   url:"https://mp.weixin.qq.com/s/xEmpxICZuZae1QwmGSU05w"},
+  {n:"桐杭岗大环线",d:"10km",cl:"1100m",a:"安吉",ct:"hu",diff:4,cat:"挑战",ft:["野路","高爬升"],car:"1.3-1.5h",st:"done",s:false,
+   intro:"安吉方向的千米级环线，以纯野路和持续爬升为特点。人极少，是真正享受山野孤独感的好路线。10km距离配1100m爬升，密度高。",
+   season:"春秋最佳",
+   note:"纯野路，需GPS轨迹导航。安吉方向",
+   url:""},
+  {n:"西湖爱心线",d:"22km",cl:"800m",a:"西湖区",ct:"hz",diff:4,cat:"挑战",ft:["长线","西湖全景","毅力"],car:"0.5h",st:"done",s:false,
+   intro:"杭州徒步圈的网红长线，GPS轨迹画出一个完美爱心。贯穿西湖群山主要山头，全程22km是对体力和意志的双重考验。",
+   season:"春秋冬最佳，需全天8-10小时",
+   note:"仅适合12岁以上经验丰富者。22km不是闹着玩的，需提前训练",
+   url:"https://mp.weixin.qq.com/s/depjGfi1gaGm8o_r1fUrmA"},
+  {n:"斗岩景区千佛山环线",d:"10km",cl:"800m",a:"诸暨",ct:"sx",diff:4,cat:"挑战",ft:["野路","奇岩","攀爬"],car:"1.5-1.8h",st:"done",s:false,
+   intro:"诸暨方向的奇岩地貌路线，千佛山石壁林立，斗岩如刀削斧劈。攀爬路段多，对胆量和技巧都有要求。是被低估的好路线。",
+   season:"春秋最佳，夏天奇岩暴晒，车程较远需早出发",
+   note:"车程1.5-1.8h较远。攀爬段注意安全",
+   url:""},
+  {n:"大明山后山小环线",d:"11km",cl:"900m",a:"临安",ct:"la",diff:4,cat:"挑战",ft:["野路","攀石","山脊"],car:"1.5-1.8h",st:"done",s:false,
+   intro:"大明山后山环线，非景区路线，纯野路穿越。有悬崖栈道遗迹、高山草甸、巨石阵。比景区路线野100倍，适合追求原始体验的进阶玩家。",
+   season:"春秋最佳，避开夏天暴晒",
+   note:"纯野路，非景区。需丰富户外经验。车程远",
+   url:"https://mp.weixin.qq.com/s/ZpC27RMPBcEWeONPU1p9jA"},
+  {n:"横坑坞瀑布环线",d:"13km",cl:"840m",a:"富阳",ct:"fy",diff:4,cat:"挑战",ft:["溯溪","瀑布","野路"],car:"1-1.3h",st:"done",s:true,
+   intro:"富阳方向的瀑布主题路线，沿溪而上可见多级瀑布。最大的横坑坞瀑布落差数十米，水量充沛时极其壮观。部分路段需涉水穿溪。",
+   season:"夏季水量大最佳，雨后瀑布更壮观，春秋亦可",
+   note:"涉水路段注意防滑，不建议雨季发大水时走",
+   url:"https://mp.weixin.qq.com/s/Kbo_5h4luZjggehK5dfGig"},
+
+  // ===== 待探索 =====
+  {n:"马岭古道·石舍到芦茨",d:"10km",cl:"100m",a:"桐庐",ct:"tl",diff:1,cat:"待探索",ft:["轻松","古村","富春江景","平路"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"沿富春江的古村平路徒步，连接石舍和芦茨两个千年古村。全程几乎无爬升，富春山居图实景地。明清建筑群保存完好，走累了可以在古村里喝杯茶。",
+   season:"春秋最佳（富春江最美），夏天江边也会热但古村有遮荫",
+   note:"车程1.5-1.8h较远。可考虑作为古村研学主题而非纯徒步",
+   url:"https://www.sohu.com/a/895288992_121124431"},
+  {n:"临安大鱼线·龙门秘境",d:"自驾线",cl:"—",a:"临安",ct:"la",diff:2,cat:"待探索",ft:["自驾","峡谷","溪流","古村"],car:"1-1.2h",st:"new",s:true,
+   intro:"临安龙门秘境区域的经典自驾线路，沿途峡谷古村+溪流捉鱼+可露营。不是纯徒步线，更适合家庭一日深度自驾游。蜻蜓线是其中最精华的延伸段。",
+   season:"夏季最佳（溪流玩水），春秋也可",
+   note:"亲子营优质候选，可结合露营和自然教育",
+   url:"https://www.hangzhou.gov.cn/art/2025/8/25/art_812262_59116449.html"},
+  {n:"富阳九仰坪·石长城",d:"10km",cl:"560m",a:"富阳",ct:"fy",diff:3,cat:"待探索",ft:["奇岩","森林","山脊"],car:"1.2-1.5h",st:"new",s:false,
+   intro:"富阳的自然石长城奇观，天然形成的岩石城墙绵延数百米。杜鹃花期山顶花海盛开。下山段穿竹林，路况良好。富阳方向较新的路线。",
+   season:"春秋最佳，4月杜鹃花期最美。夏天山脊晒",
+   note:"石长城是纯天然地质奇观，非人工。踩线确认路况",
+   url:"https://www.sohu.com/a/1008060299_121124664"},
+  {n:"富阳壶源溪·龙鳞坝",d:"自驾线",cl:"—",a:"富阳",ct:"fy",diff:1,cat:"待探索",ft:["玩水","露营","轻松","亲子"],car:"1-1.2h",st:"new",s:true,
+   intro:"富阳壶源溪上的人工龙鳞坝，网红打卡点但孩子们确实喜欢。溪流浅可安全踩水，周边可露营。非徒步路线，是玩水+野餐+露营的周末方案。",
+   season:"夏季最佳（玩水），春秋水位低效果打折",
+   note:"人多（网红点），想清静需工作日去。亲子玩水入门首选",
+   url:"https://mp.weixin.qq.com/s?__biz=MjM5ODM4Mjg3Mg==&mid=2651680454&idx=2&sn=12b8ad669ca911b7f954bded98cbfd92"},
+  {n:"富阳横坑坞溯溪古道",d:"10km",cl:"~500m",a:"富阳",ct:"fy",diff:3,cat:"待探索",ft:["溯溪","瀑布","野路"],car:"1-1.3h",st:"new",s:true,
+   intro:"富阳方向的纯溯溪路线，沿峡谷溪流而上，多级瀑布是最大看点。10km+涉水对体能有要求。夏天水量充沛时最壮观。",
+   season:"夏季最佳（水量大），雨后瀑布更壮观但需注意安全",
+   note:"纯溯溪路线，需溯溪鞋。10km涉水不短，建议8岁以上",
+   url:"https://baijiahao.baidu.com/s?id=1766470090662852024"},
+  {n:"临安都林山溯溪",d:"4km",cl:"—",a:"临安",ct:"la",diff:1,cat:"待探索",ft:["溯溪","玩水","亲子","分段难度"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"本周报重点推荐路线！临安清凉峰区域，4km折返溯溪。前半段浅水踩水亲子友好，后半段有攀爬段增加挑战。分段难度设计让不同能力的孩子都能找到乐趣。",
+   season:"夏季最佳（6-8月），水质清凉见底",
+   note:"溯溪鞋必备，登山杖探路。车程稍远但值得",
+   url:"https://m.ctrip.com/webapp/you/tripshoot/paipai/detail/detail?articleId=181823321"},
+  {n:"安吉井空里峡谷溯溪",d:"7km",cl:"—",a:"安吉",ct:"hu",diff:2,cat:"待探索",ft:["溯溪","巨石","水战","团队"],car:"1-1.3h",st:"new",s:true,
+   intro:"本周报重点推荐路线！安吉山川乡，纯水路溯溪穿越。巨石林立+碧潭跳水+团队协作，经典的独立营溯溪目的地。7km全程涉水，体验感拉满。",
+   season:"夏季最佳（6-8月），水质极佳",
+   note:"独立营经典路线。团队水战是核心体验。需全程溯溪装备",
+   url:"https://zhuanlan.zhihu.com/p/66905058"},
+  {n:"德清碧坞龙潭",d:"3-5km",cl:"—",a:"德清",ct:"hu",diff:1,cat:"待探索",ft:["溯溪","瀑布","轻松","小三峡"],car:"1-1.2h",st:"new",s:true,
+   intro:"德清方向距杭州最近的溯溪入门线，3-5km可灵活调节。碧坞龙潭峡谷水清见底，被形容为'清爽如九寨'。车程仅1h出头，交通很方便。",
+   season:"夏季最佳（6-8月），峡谷凉爽",
+   note:"亲子入门的溯溪线首选之一，距离短风险低",
+   url:"https://baike.baidu.com/item/碧坞龙潭/8626594"},
+  {n:"安吉南车悬瀑",d:"6.5km",cl:"430m",a:"安吉",ct:"hu",diff:2,cat:"待探索",ft:["瀑布","竹海","峡谷"],car:"1.8-2h",st:"new",s:true,
+   intro:"安吉方向的'浙江版哀牢山'，以瀑布群和竹海峡谷为特色。半山腰悬瀑视觉效果震撼。缺点是正在快速走红，端午日客流已超千人。",
+   season:"夏季水量大最佳，车程1.8-2h较远需早出发",
+   note:"⚠️正在走红中，趁早安排。车程接近2h上限",
+   url:"https://club.autohome.com.cn/bbs/thread/7939fdafe76d4c1f/113685909-1.html"},
+  {n:"临安太湖源+神龙川",d:"轻徒",cl:"—",a:"临安",ct:"la",diff:1,cat:"待探索",ft:["溯溪","景区","轻松","配套完善"],car:"1.2-1.5h",st:"new",s:true,
+   intro:"太湖源和神龙川两个景区可一日串联，轻松+配套设施完善。太湖源溯溪+神龙川景区步道，适合'不想太野'的家庭日归方案。景区有餐厅卫生间等配套。",
+   season:"夏季最佳（溯溪玩水），春秋也可",
+   note:"景区门票需提前了解。配套完善适合亲子日归营",
+   url:"https://cj.sina.com.cn/articles/view/7879922979/1d5ae152301901pk1q"},
+  {n:"安吉龙王山",d:"12km",cl:"900m",a:"安吉",ct:"hu",diff:4,cat:"待探索",ft:["高爬升","野路","山脊","浙北第一峰"],car:"1.8-2h",st:"new",s:false,
+   intro:"安吉龙王山海拔1587m，浙北第一高峰。野路+山脊+高爬升组合，12km配900m爬升，密度中等但海拔高。登顶后视野横扫浙北群山。",
+   season:"春秋最佳，900m爬升需做好体能准备",
+   note:"仅适合老手。车程远（1.8-2h），全天行程",
+   url:"https://post.smzdm.com/p/a3m6x7vn/"},
+
+  // ===== 骑行 =====
+  {n:"临安青山湖骑行",d:"32km",cl:"—",a:"临安",ct:"la",diff:1,cat:"骑行",ft:["骑行","平路","湖景","亲子"],car:"0.8h",st:"done",s:true,
+   intro:"临安青山湖环湖绿道，全程32km平路无爬升。有水杉森林段（水上森林）、湖景观景台。可租自行车，孩子能骑多远算多远，中途随时折返。",
+   season:"春秋最佳（水杉变色季绝美），夏天湖边晒需防晒",
+   note:"无需徒步装备，租自行车即可。32km可分段骑行，不追求全程",
+   url:"https://mp.weixin.qq.com/s/h566A9kGieIbnxCEf4Su0A"},
+
+  // ===== 社群伙伴分享（待探索） =====
+  {n:"萧山三泉王村",d:"5.4km",cl:"300m",a:"萧山",ct:"xs",diff:1,cat:"待探索",ft:["轻松","古村","玻璃栈道","泉眼"],car:"0.5h",st:"new",s:true,
+   intro:"萧山方向的小众古村徒步线，千年古樟树和多处泉眼是特色。有玻璃栈道和网红红心打卡点，适合拍照。路线短、爬升温和，是带低龄娃试水的好选择。",
+   season:"春秋最佳，夏天树荫可遮阴",
+   note:"车程仅半小时，近。三泉王村有停车场， village walk 友好",
+   url:""},
+  {n:"指南村环线",d:"6km",cl:"300m+",a:"临安",ct:"la",diff:1,cat:"待探索",ft:["轻松","古村","稻田","银杏"],car:"1.2-1.5h",st:"new",s:false,
+   intro:"临安东天目山下的千年古村，10月金色稻田和11月火红枫叶是最大看点，银杏季更是一场视觉盛宴。古村环线走下来轻松惬意，适合作为赏秋专线。",
+   season:"秋季最佳（10月稻田+11月枫叶银杏），其他季节亦可",
+   note:"车程1.2-1.5h。赏秋季人多，建议错峰工作日",
+   url:""},
+  {n:"桐杭岗小环线",d:"6km",cl:"400m",a:"安吉",ct:"hu",diff:1,cat:"待探索",ft:["轻松","日出","雪雾凇","扎营"],car:"1.3-1.5h",st:"new",s:false,
+   intro:"安吉方向的小众山脊线，最大亮点是可看日出和冬季雾凇雪景。6km短距离配400m温和爬升，扎营过夜第二天看日出是经典玩法。",
+   season:"冬季雾凇季最佳，春秋也可，夏天树荫可走",
+   note:"安吉方向，车程1.3h+。扎营需确认是否允许",
+   url:""},
+  {n:"九仰坪小环线",d:"6km",cl:"450m",a:"富阳",ct:"fy",diff:2,cat:"待探索",ft:["森林","石长城","饮马洞"],car:"1.2-1.5h",st:"new",s:false,
+   intro:"富阳方向的石长城入门级环线，途经郎家坞、饮马洞等节点。比总库中10km的石长城长线短一半，但核心奇岩景观都能看到。适合想体验石长城但体力有限的家庭。",
+   season:"春秋最佳，杜鹃花期（4-5月）山顶有花海",
+   note:"富阳方向，车程1.2-1.5h。注意与已有'九仰坪·石长城'（10km长线）区分",
+   url:""},
+  {n:"湘湖老虎洞山",d:"7km",cl:"300m",a:"萧山",ct:"xs",diff:1,cat:"待探索",ft:["轻松","湖景","寺庙","城市山"],car:"0.5h",st:"new",s:true,
+   intro:"湘湖景区旁的城市山林线，可俯瞰湘湖全景，途经老虎洞和莲华寺。全程有步道，安全系数高。湘湖本身的风景已经很能打，加上轻徒步恰到好处。",
+   season:"四季皆宜，春秋湘湖景色最佳",
+   note:"萧山方向，车程近。湘湖周边配套完善，适合半日游",
+   url:""},
+  {n:"长乐林场娘娘山环线",d:"7km",cl:"400m+",a:"余杭",ct:"hz",diff:2,cat:"待探索",ft:["森林","野跑","水库","露营"],car:"0.8h",st:"new",s:true,
+   intro:"从长乐林场出发的娘娘山小环线，途经松树林野跑段和甘岭水库。林场本身也是杭州知名的露营和野餐地。与总库中已有的娘娘山环线可能是同山不同走法，需踩线确认。",
+   season:"春夏秋均可，林场露营季夏天最热",
+   note:"⚠️与已有'娘娘山环线'（7.5km/550m）可能为同区域不同走法，需确认",
+   url:""},
+  {n:"临安尖山五峰",d:"~8km",cl:"800m+",a:"临安",ct:"la",diff:3,cat:"待探索",ft:["野攀","棋盘石","奇岩","高爬升"],car:"1.2-1.5h",st:"new",s:false,
+   intro:"临安方向的入门级野攀路线，棋盘石、姐妹石、仙人石、鸡冠岩等奇岩遍布。被称为'入门级野攀'，说明有手脚并用的攀爬段但不危险。800m+爬升对入门家庭有挑战。",
+   season:"春秋最佳，夏天注意防晒",
+   note:"有攀爬段，建议8岁以上。车程1.2-1.5h。来源为社群伙伴分享",
+   url:""},
+  {n:"玉皇山",d:"9km+",cl:"300m",a:"上城区",ct:"hz",diff:1,cat:"待探索",ft:["轻松","八卦田","溶洞","湖景","城市山"],car:"0.5h",st:"new",s:true,
+   intro:"杭州市区内的经典山线，途经八卦田、紫来溶洞、七星缸等景点，可观西湖日落。路线以城市山林步道为主，零车程负担，适合作为城市轻徒步日归方案。",
+   season:"四季皆宜，春秋八卦田最美，夏天注意防晒",
+   note:"市区路线，公交地铁可达。溶洞段注意湿滑",
+   url:""},
+  {n:"富阳仙人洞",d:"~9km",cl:"~400m",a:"富阳",ct:"fy",diff:2,cat:"待探索",ft:["探洞","石灰石","避暑","轻松"],car:"1-1.2h",st:"new",s:true,
+   intro:"富阳方向的探洞主题路线，乳白色石灰石洞穴是最大看点，洞内清凉避暑。号称'新手小白探洞体验'，说明探洞难度不大。夏天走这条线可以兼得徒步+纳凉。",
+   season:"夏季最佳（洞内避暑），春秋亦可",
+   note:"探洞需头灯，注意安全。富阳方向车程适中",
+   url:""},
+  {n:"皋亭山小环线",d:"9km",cl:"~600m",a:"上城区",ct:"hz",diff:2,cat:"待探索",ft:["城市山","历史","龙洞","轻松"],car:"0.7h",st:"new",s:true,
+   intro:"皋亭山的环线走法，途经黄鹤山、皋亭神祠、龙洞、仙姑洞、韩蕲王将台等历史遗迹点。比总库中已有的皋亭山环线爬升更高（600m vs 450m），可能为绕得更远的环线版本。",
+   season:"春季桃花季最佳，夏秋亦可",
+   note:"⚠️与已有'皋亭山环线'（9km/450m）可能为同山不同走法，需确认",
+   url:""},
+  {n:"西天目山环线",d:"9km",cl:"700m",a:"临安",ct:"la",diff:2,cat:"待探索",ft:["森林","古树","古道","景区"],car:"1.2-1.5h",st:"new",s:false,
+   intro:"西天目山的环线版本（区别于总库中5.5km的大树王景区单点版），途经大树王、森林漫步杉树群、开山老殿等核心景点。9km比景区版多走约3.5km，能更完整地体验天目山原始森林。",
+   season:"春秋最佳（天目秋色绝美），夏天森林遮阴凉快",
+   note:"有景区门票。台阶多，比景区版距离长但爬升反而更低",
+   url:""},
+  {n:"午潮山白龙潭小环线",d:"9km+",cl:"740m",a:"西湖区",ct:"hz",diff:3,cat:"待探索",ft:["野路","白龙潭","飞凤岩","森林"],car:"0.5h",st:"new",s:true,
+   intro:"西湖区西部的另一条午潮山走法，区别于总库中的'豆腐皮小环线'。途经白龙潭景区、飞凤岩观景台，野路探险段占比更高。740m爬升配9km+距离，是进阶家庭的不错选择。",
+   season:"春秋最佳，夏天森林遮阴可走",
+   note:"⚠️与已有'午潮山豆腐皮小环线'（9km/700m）为同区域不同走法。野路段注意安全",
+   url:""},
+  {n:"临平山环线",d:"9.5km",cl:"300m+",a:"临平",ct:"hz",diff:1,cat:"待探索",ft:["轻松","城市山","东来阁","茶园"],car:"0.8h",st:"new",s:true,
+   intro:"临平城区内的城市山林环线，途经东来阁、邱山问茶、断岭残雪等景点。爬升仅300m+但距离接近10km，属于'距离长但爬升温和'的类型，适合练耐力。",
+   season:"四季皆宜，春季茶园新绿最美",
+   note:"临平方向，车程近。东来阁可俯瞰临平全景",
+   url:""},
+  {n:"五郎山环线",d:"10km+",cl:"500m",a:"余杭",ct:"hz",diff:3,cat:"待探索",ft:["竹林","观景台","隧道","长线"],car:"0.8h",st:"new",s:true,
+   intro:"余杭方向的竹林主题环线，途经五郎亭、五郎山观景台和竹林隧道。10km+距离配500m爬升，属于距离偏长但爬升温和的'耐力型'进阶路线。竹林隧道是亮点。",
+   season:"春夏秋均可，夏天竹林遮阴凉爽",
+   note:"余杭方向，车程近。距离对低龄孩子偏长，建议7岁以上",
+   url:""},
+  // ===== 社群伙伴分享·浙江231条（第二批） =====
+  {n:"超山小环线",d:"10.5km",cl:"400m+",a:"余杭",ct:"hz",diff:2,cat:"待探索",ft:["轻松","梅花","古寺","城市山"],car:"0.8h",st:"new",s:true,
+   intro:"余杭超山风景区环线，以十里梅花闻名（中国五大梅园之一）。途经南园、青莲寺、超峰（玉喜寺）、唐梅、宋梅、北园等节点。梅花季节（2-3月）最美，平时也是清静的城市山林线。",
+   season:"冬末春初梅花季最佳（2-3月），秋季桂花季也不错，夏天有树荫",
+   note:"梅花季人多建议工作日去。余杭方向，车程近",
+   url:""},
+  {n:"半山牛线",d:"约11km",cl:"400m",a:"拱墅区",ct:"hz",diff:2,cat:"待探索",ft:["轻松","城市山","湖景"],car:"0.5h",st:"new",s:true,
+   intro:"杭州城北半山+虎山公园联走，途经龙山水库长廊，GPS轨迹画出来像一头牛🐂。全程步道完善，适合城市轻徒步。比总库中已有的半山国家森林公园环线更长，串起更多景点。",
+   season:"四季皆宜，春季最美",
+   note:"市区0.5h车程，超方便。⚠️与已有半山环线（7.5km）为同区域不同走法",
+   url:""},
+  {n:"百丈岭",d:"11km",cl:"900m",a:"临安",ct:"la",diff:4,cat:"待探索",ft:["野路","高山","古道","冬季雪景"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"临安方向的高山古道，以冬季雾凇雪景最佳（杭州周边的'小东北'）。云顶湖冻冰后宛如天空之镜，林海雪原穿越感极强。900m爬升需较强体能。",
+   season:"冬季最佳（雾凇雪景），春秋可走但少了特色",
+   note:"冬季注意防滑保暖，需冰爪。车程1.5h+",
+   url:""},
+  {n:"九溪十八涧",d:"12km",cl:"约500m",a:"西湖区",ct:"hz",diff:2,cat:"待探索",ft:["溪流","茶园","湖景","经典"],car:"0.5h",st:"new",s:true,
+   intro:"杭州最经典的徒步路线之一！从九溪烟树出发，溪流潺潺穿茶园，经龙井村品正宗西湖龙井，走十里琅珰远眺西湖全景，终点云栖竹径。一路溪流+茶园+山脊，经典中的经典。",
+   season:"四季皆宜，春秋最美（龙井新茶季、九溪红叶季），夏天溪流段凉爽",
+   note:"公共交通可达，无需自驾。周末龙井村人多，建议早出发",
+   url:""},
+  {n:"杭宣古道+独松关环线",d:"12km",cl:"550m",a:"余杭",ct:"hz",diff:3,cat:"待探索",ft:["古道","历史","关隘","禅寺"],car:"0.8-1h",st:"new",s:true,
+   intro:"南宋时期的杭州-宣城古驿道，独松关是重要军事关隘。途经丰山村文化礼堂、独松关壹号咖啡馆（惊喜！）、古驿道石板路、釜托禅寺。人文历史感拉满的一条线。",
+   season:"春秋最佳，夏天古驿道有树荫",
+   note:"余杭方向，车程近。独松关咖啡馆是亮点",
+   url:""},
+  {n:"道场坪小环线",d:"约12km",cl:"700m+",a:"临安",ct:"la",diff:3,cat:"待探索",ft:["野路","山脊","草甸","红杉林"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"临安方向的高山草甸型路线，途经高山草甸、沼泽湿地、红杉林，野路山脊线视野开阔。地形变化丰富，有贴边窄道增加刺激感。红杉林秋季一片火红。",
+   season:"春秋最佳（秋季红杉林最美），夏天草甸晒，冬天可能有雪",
+   note:"临安方向，车程较远。有沼泽段注意脚下",
+   url:""},
+  {n:"小和山屏峰山环线",d:"12km",cl:"700m+",a:"西湖区",ct:"hz",diff:3,cat:"待探索",ft:["城市山","森林","寺庙"],car:"0.5h",st:"new",s:true,
+   intro:"小和山高教园区的后花园，途经小和山、金莲寺、老焦山、屏峰山、大岭山、屏峰普院。串联多座城市山，全程森林覆盖，是西湖区西部的隐藏宝藏线。",
+   season:"春夏秋均可，森林遮阴好",
+   note:"市区可达，车程仅0.5h。金莲寺是地标",
+   url:""},
+  {n:"如意尖环线",d:"13km",cl:"760m",a:"西湖区",ct:"hz",diff:3,cat:"待探索",ft:["野路","山脊","茶园","水库"],car:"0.6h",st:"new",s:false,
+   intro:"西湖区最高峰如意尖的大环线版本（注意区别于总库中8.5km的小环线）。途经如意尖、板壁山水库、吉祥禅寺、大片茶园。比小环线多走4.5km，山脊视野更好。",
+   season:"春秋冬最佳，夏天山脊暴晒",
+   note:"⚠️与已有如意尖小环线（8.5km/650m）为同山不同走法（大环vs小环），已有组织经验可参考",
+   url:""},
+  {n:"余杭九度岭古道",d:"12.5km",cl:"300m+",a:"余杭",ct:"hz",diff:3,cat:"待探索",ft:["古道","竹林","关隘","水库"],car:"0.8h",st:"new",s:true,
+   intro:"余杭方向的九度岭关隘古道，穿越竹林至九度岭关隘，途经里塘坞、香山寺、西中水库、安溪村、康门水库等。300m+的温和爬升配12.5km距离，属于'距离长爬升少'的类型。",
+   season:"春秋最佳，夏天竹林遮阴好",
+   note:"⚠️与已有东明山九度岭古道环线（10km/700m）可能为同区域不同走法，爬升差异大需确认",
+   url:""},
+  {n:"金紫尖",d:"13.5km",cl:"1300m",a:"淳安",ct:"ca",diff:5,cat:"待探索",ft:["野路","奇石","高爬升","露营"],car:"2h+",st:"new",s:false,
+   intro:"淳安方向的千米级奇峰，以奇林怪石著称。1300m爬升是路线库中最高之一，山顶可扎营过夜。15座山峰连绵起伏，金紫尖为核心。适合追求极致体验的挑战者。",
+   season:"春秋最佳，夏季闷热不推荐，冬季谨慎",
+   note:"仅适合经验丰富的挑战者。车程2h+较远。山顶露营需充分准备",
+   url:""},
+  {n:"午潮山大金刚",d:"13.5km",cl:"约1500m",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["野路","攀石","高强度","山脊"],car:"0.5h",st:"new",s:false,
+   intro:"午潮山最硬核走法——三座山峰三上三下，累计爬升约1500m！全程野路无台阶，攀岩壁、穿树林。对比小金刚（11km/1080m）更长更难，是午潮山的终极挑战版。",
+   season:"春秋冬最佳，夏天高强度+湿热不推荐",
+   note:"⚠️与已有午潮山小金刚为大/小圈不同难度版本。仅适合老手中的老手",
+   url:""},
+  // ===== 社群伙伴分享·浙江231条（第三批·长距离挑战线） =====
+  {n:"午潮山豆腐皮古道大环线",d:"约14km",cl:"约1200m",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["野路","古道","水库","高强度"],car:"0.5h",st:"new",s:false,
+   intro:"豆腐皮古道的终极走法——大环线版！串联大洋坞水库、白龙潭、光明寺水库等经典节点，全程野路+古道，爬升翻倍。对比小环线（9km/700m）是全面升级版。",
+   season:"春秋最佳，夏天高温不推荐",
+   note:"⚠️与已有午潮山豆腐皮小环线为大/小环不同走法。仅适合体能强者",
+   url:""},
+  {n:"船坞山环线",d:"14km",cl:"1400m",a:"萧山",ct:"xs",diff:5,cat:"待探索",ft:["野路","茶园","奇石","水库"],car:"0.8h",st:"new",s:false,
+   intro:"萧山方向的千米级线路，途经女娲石（地标奇石）、狗冲岭茶园、竹林和向天岭水库。1400m爬升，14km距离，萧山区域少有的重装级挑战线。",
+   season:"春秋冬最佳，夏天闷热",
+   note:"萧山方向，车程0.8h。爬升较大，注意体能储备",
+   url:""},
+  {n:"杭州狐狸线",d:"约15km",cl:"600m",a:"西湖区",ct:"hz",diff:3,cat:"待探索",ft:["茶园","古道","历史","城市山"],car:"0.5h",st:"new",s:true,
+   intro:"GPS轨迹画出来像一只小狐狸🦊！从龙井村出发，经龙井茶园、辛亥革命纪念馆、乾隆古道、烟霞洞、大麦岭摩崖题记等节点。600m爬升配15km距离，属于距离长爬升温和的类型。",
+   season:"春秋最佳（龙井茶园绿意盎然），夏天有树荫",
+   note:"市区可达，公共交通方便。属于趣味轨迹线，适合亲子体验",
+   url:""},
+  {n:"桃花溪三尖",d:"15km",cl:"约1100m",a:"临安",ct:"la",diff:4,cat:"待探索",ft:["野路","山脊","高山","落日"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"临安方向的三尖穿越线，途经竹林、松树林、芦苇荡。山顶看连绵群山和日落是最大的亮点——视野极其开阔，适合天气好的秋日。",
+   season:"秋季最佳（芦苇荡+落日绝美），春季也不错",
+   note:"临安方向，车程1.5h+。选晴天去看落日",
+   url:""},
+  {n:"清凉峰南线（难）",d:"16km",cl:"1200m+",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["野路","高山草甸","原始森林","险峰"],car:"2h+",st:"new",s:false,
+   intro:"清凉峰两条经典走法之一——南线！穿越险峰峻岭、高山草甸和原始森林，1200m+爬升。感受浙江屋脊的壮阔，适合追求极致体验的徒步老手。",
+   season:"春秋最佳，冬季南坡相对温和些",
+   note:"国家级自然保护区，需注意相关规定。仅适合经验丰富的挑战者",
+   url:""},
+  {n:"清凉峰北线",d:"16.9km",cl:"1900m+",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["野路","高山","露营","日出日落","远眺黄山"],car:"2h+",st:"new",s:false,
+   intro:"清凉峰北线——1900m+爬升是总库中最高之一！清凉峰顶打卡，适合露营看日出赏日落，天气好时可远眺黄山。比南线更野、更难、更高。",
+   season:"夏秋最佳（露营看日出日落），冬季极寒不推荐",
+   note:"仅适合经验丰富的挑战者+有露营装备。车程2h+较远",
+   url:""},
+  {n:"西湖十座寺庙连穿",d:"17km",cl:"700m",a:"西湖区",ct:"hz",diff:3,cat:"待探索",ft:["寺庙","人文","城市山","文化"],car:"0.5h",st:"new",s:true,
+   intro:"一次走完西湖群山十大寺庙！永兴寺→石人岭→中印寺→法喜寺→法净寺→三生石→法镜寺→灵隐寺→永福寺→韬光寺→灵顺寺→法华寺。文化浓度拉满的一条线。",
+   season:"四季皆宜，寺庙不受季节限制",
+   note:"市区可公交到达。寺庙多可补水补食。春节/庙会期间个别寺庙人多",
+   url:""},
+  {n:"马啸岭古道大环线",d:"17km",cl:"约1300m",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["古道","山脊","武功山风","高山草甸"],car:"1.8-2h",st:"new",s:false,
+   intro:"被徒步圈称为'杭州周边的小武功山'！临安三尖的一段精华，绝美山脊线+矮竹林+溪流，高山草甸视野极其开阔。17km/1300m爬升全面考验体能。",
+   season:"秋季最佳（草甸金黄），春夏季绿草如茵也不错",
+   note:"临安方向，车程较远（近2h）。山脊暴晒注意防晒",
+   url:""},
+  {n:"磨心尖白石尖环线",d:"17km",cl:"约1900m",a:"淳安",ct:"ca",diff:5,cat:"待探索",ft:["野路","刀刃山脊","陡岩壁","险峰"],car:"2h+",st:"new",s:false,
+   intro:"淳安方向最硬核的路线之一——薄如刀刃的山脊线，陡岩壁，大小山峰十几座连绵起伏。1900m爬升配17km距离，难度极高。仅适合老手中的老手！",
+   season:"春秋最佳，夏天湿热+高强度不推荐",
+   note:"⚠️刀刃山脊段恐高者慎入。车程2h+较远。仅适合顶级挑战者",
+   url:""},
+  {n:"西湖群山CN地图线",d:"18km",cl:"1000m+",a:"西湖区",ct:"hz",diff:4,cat:"待探索",ft:["趣味轨迹","茶园","野路","城市山"],car:"0.5h",st:"new",s:false,
+   intro:"GPS轨迹画出'CN'字母的趣味走法！共三个版本可选。野路+台阶路+公路混合，途径各种茶园。区别于富贵小马线（13km/700m），CN地图线更长更高。",
+   season:"春秋冬最佳",
+   note:"⚠️与已有西湖群山富贵小马线为不同轨迹走法（CN地图线 vs 小马线）。市区可达",
+   url:""},
+  {n:"大明山后山大环线（难）",d:"19km",cl:"1400m",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["溯溪","攀岩","拉绳","野路"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"大明山后山的终极挑战版！溯溪+拉绳爬山+攀岩，几乎集合了所有高难度元素。对比小环线（11km/900m）全面升级——更长、更高、更难。",
+   season:"春秋最佳，夏季溯溪段凉爽但整体强度大",
+   note:"⚠️与已有大明山后山小环线为大/小环不同走法。需拉绳/攀岩经验",
+   url:""},
+  {n:"天目山三尖",d:"19km",cl:"1500m",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["高山","山脊","三尖连穿","野路"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"天目山终极线路——三尖连穿（仙人顶、龙王山、药王峰）！对比双尖小环线（10.5km/900m）是全面升级版。天目山脉精华尽在这一条。",
+   season:"春秋最佳，冬季可能有雪/雾淞",
+   note:"⚠️与已有天目双尖小环线为三尖vs双尖不同走法。仅适合经验丰富者",
+   url:""},
+  {n:"西湖兔子线",d:"21km",cl:"1200m",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["趣味轨迹","寺庙","五上五下","城市山"],car:"0.5h",st:"new",s:false,
+   intro:"GPS轨迹画出一只兔子🐰的经典趣味线！五上五下途经多个寺庙，21km是爱心线的升级版（爱心线22km/800m），爬升更大路线更复杂。",
+   season:"春秋冬最佳",
+   note:"长距离高强度，仅适合体能强的徒步爱好者。市区可达",
+   url:""},
+  {n:"临安三尖",d:"约23km",cl:"2100m",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["高山","山脊","三尖连穿","高强度"],car:"1.8-2h",st:"new",s:false,
+   intro:"杭徽古道的精华段——穿越太子尖、百丈岭、童公尖三座高峰！2100m累计爬升、23km，是总库中爬升最高的路线之一（仅次于清凉峰北线）。",
+   season:"春秋最佳，冬季可能有雪/雾淞",
+   note:"临安方向车程近2h。仅适合顶级挑战者，需充足准备",
+   url:""},
+// ===== 社群伙伴分享·浙江231条（第四批·杭州终极挑战线） =====
+  {n:"西湖玫瑰路线",d:"24km",cl:"约100m",a:"西湖区",ct:"hz",diff:3,cat:"待探索",ft:["经典","湖景","城市山","文化"],car:"0.5h",st:"new",s:true,
+   intro:"GPS轨迹画出玫瑰花的趣味走法！途经雷峰塔、赵公堤、北山街、白堤、孤山公园、湖滨路、音乐喷泉等西湖核心景点。24km距离但仅100m爬升，属于'平路长距离'型，考验的是耐力而非体能。",
+   season:"四季皆宜，春秋最美",
+   note:"市区可达，全程平路为主，适合有一定耐力基础的孩子",
+   url:""},
+  {n:"三界标毅",d:"24km",cl:"约1400m",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["城市山","山脊","高强度","标毅线"],car:"0.5h",st:"new",s:false,
+   intro:"杭州标毅线的加强版——跨过西湖、余杭、富阳三个区！比西湖半标毅线（25km/1200m）多跨一个区，爬升也更猛。钱塘三界的概念很酷，适合对标毅线已经熟悉的老手。",
+   season:"春秋冬最佳，夏天高温不推荐",
+   note:"⚠️与已有西湖半标毅线为不同走法（三界vs半标毅）。仅适合体能极强且有经验者",
+   url:""},
+  {n:"西湖标毅线",d:"24km",cl:"1500m+",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["城市山","标毅线","古道","高强度"],car:"0.5h",st:"new",s:false,
+   intro:"杭州经典标毅走法！从老和云起牌坊出发，经北高峰、龙门亭、天门山、十里琅珰、五云山、九溪、龙井茶园基地。1500m+爬升配24km距离，是杭州城市山徒步的终极挑战之一。",
+   season:"春秋冬最佳",
+   note:"⚠️与已有西湖半标毅线可能为同线不同称呼，数据接近需确认",
+   url:""},
+  {n:"西湖群山中国龙",d:"26km",cl:"1500m",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["趣味轨迹","城市山","茶园","山脊"],car:"0.5h",st:"new",s:false,
+   intro:"GPS轨迹画出一条中国龙的趣味长线！历经西湖十景，串联多个山峰，远眺西湖群山美景。26km/1500m是爱心线（22km/800m）和兔子线（21km/1200m）的升级版。",
+   season:"春秋冬最佳",
+   note:"长距离高强度，仅适合体能强者。市区可达",
+   url:""},
+  {n:"午潮山麒麟八库",d:"33km",cl:"3300m",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["野路","水库","高强度","山脊"],car:"0.5h",st:"new",s:false,
+   intro:"午潮山最变态走法——串联8座水库：大毛坞、光明寺、龙尾巴山塘、杭宣坞、黄梅坞、大小洋坞、长子坞、小子坞！33km/3300m爬升是总库中最高纪录，几乎相当于连续爬三座标准山峰。",
+   season:"春秋冬最佳",
+   note:"⚠️与已有午潮山小金刚、大金刚为同区域不同走法。仅适合顶级耐力强者",
+   url:""},
+  {n:"风浙线（自虐）",d:"约42km",cl:"3400m+",a:"西湖区",ct:"hz",diff:5,cat:"待探索",ft:["野路","山脊","超长线","自虐级"],car:"0.5h",st:"new",s:false,
+   intro:"杭州城市山徒步的终极自虐线！贯穿闸口浦江脊龙岗山脊和西湖风景区山脊，串联40余座山峰——包括杭州最高峰如意尖和第二高峰午潮山。42km/3400m+是真正的'从日出走到日落'。",
+   season:"春秋最佳，冬季白天短不推荐",
+   note:"仅适合顶级挑战者。需凌晨出发、带头灯。市区可达但强度极高",
+   url:""},
+  {n:"天目山七尖",d:"45km",cl:"3500m+",a:"临安",ct:"la",diff:5,cat:"待探索",ft:["高山","山脊","七尖连穿","超长线"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"天目山终极终极线路——七尖连穿！华东第二虐路线，仙人顶、龙王山、药王峰、千亩田、桐坑岗、仰天坪、大仙顶七座高峰一网打尽。45km/3500m+是总库中长度和爬升的双料冠军。",
+   season:"春秋最佳，冬季可能有雪",
+   note:"⚠️与已有天目双尖小环线（10.5km/900m）和天目山三尖（19km/1500m）为不同走法（七尖vs三尖vs双尖）。仅适合顶级耐力+有经验者",
+   url:""},
+  // ===== 社群伙伴分享·浙江231条（第五批·宁波片区） =====
+  {n:"西畈村油菜花环线",d:"约3km",cl:"约100m",a:"宁波奉化",ct:"nb",diff:1,cat:"待探索",ft:["轻松","油菜花","梯田","春季限定"],car:"2h+",st:"new",s:true,
+   intro:"宁波奉化方向的春季限定路线！西畈村梯田油菜花规模壮观，被称为'宁波小婺源'。仅3km/100m爬升，极轻松，适合亲子春季踏青。",
+   season:"春季限定（3月中下旬油菜花最佳）",
+   note:"车程2h+较远。春季花期人多建议工作日去",
+   url:""},
+  {n:"长溪岭古道-英雄水库环线",d:"5km",cl:"200m+",a:"宁波江北",ct:"nb",diff:1,cat:"待探索",ft:["古道","水库","轻松"],car:"1.5h",st:"new",s:true,
+   intro:"宁波江北方向的轻量环线，途经长溪岭古道和英雄水库。5km/200m+爬升，非常适合入门亲子。水库风景不错，夏天可以沿水边走。",
+   season:"四季皆宜",
+   note:"车程约1.5h。适合作为宁波方向的第一条体验线",
+   url:""},
+  {n:"方家河头亲子小环线",d:"约5km",cl:"约300m",a:"宁波慈溪",ct:"nb",diff:1,cat:"待探索",ft:["古村","亲子","轻松","柿子"],car:"1.5h",st:"new",s:true,
+   intro:"宁波慈溪方向的亲子友好线！途经方家河头村——千年古村，古井古树、古宅古巷保存完好，村子里还有很多柿子树。5km/300m轻松走，文化+自然双重体验。",
+   season:"秋季最佳（柿子成熟+古村秋色），春季也不错",
+   note:"车程约1.5h。古村可停留拍照、买柿子",
+   url:""},
+  {n:"它山堰-蝴蝶谷环线",d:"约6km",cl:"100m+",a:"宁波海曙",ct:"nb",diff:1,cat:"待探索",ft:["溯溪","亲子","轻松","古迹"],car:"1.5h",st:"new",s:true,
+   intro:"宁波海曙方向的轻量环线，途经它山堰观景台、茶梅登山步道、望天坪、蝶泉、蝴蝶谷。6km/100m+极轻松，夏天溯溪段好玩。注意蝴蝶谷周末人多。",
+   season:"春夏最佳（溯溪+蝴蝶），秋季也可",
+   note:"⚠️车程1.5h。蝴蝶谷周末人多不算小众，但不影响作为亲子玩水线",
+   url:""},
+  {n:"四明大桥樱花小环线",d:"6km",cl:"100m+",a:"宁波余姚",ct:"nb",diff:1,cat:"待探索",ft:["樱花","轻松","春季限定","山景"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波余姚四明山的春季限定路线！春季樱花烂漫，秋季红黄绿叶交相辉映。四明山区域风景多变，6km/100m+轻松适合亲子。",
+   season:"春季樱花季（3-4月）最佳，秋季红叶季也很美",
+   note:"车程1.5-1.8h。樱花季人多",
+   url:""},
+  {n:"岭南古道",d:"6km",cl:"200m",a:"宁波鄞州",ct:"nb",diff:1,cat:"待探索",ft:["古道","湖景","轻松","秋季"],car:"1.5h",st:"new",s:true,
+   intro:"宁波鄞州方向的轻量古道线，途经岭南古道，可俯瞰东钱湖。路上有覆盆子和野笋，途经稻田和芦苇。6km/200m轻松适合亲子。",
+   season:"秋季最佳（稻田金黄+芦苇），春夏也有野果",
+   note:"车程约1.5h。东钱湖风景好",
+   url:""},
+  {n:"栖霞坑黄金古道",d:"6km",cl:"200m",a:"宁波奉化",ct:"nb",diff:1,cat:"待探索",ft:["古道","金钱松","秋季限定","轻松"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波奉化方向的秋季限定路线！黄金古道的金钱松在秋季变成一片金黄，林间小路颜值极高。6km/200m轻松适合亲子秋季赏景。",
+   season:"秋季限定（10-11月金钱松最佳）",
+   note:"车程1.5-1.8h。秋季黄金季节人多",
+   url:""},
+  {n:"新建村梅花环线",d:"6km",cl:"约300m",a:"宁波奉化",ct:"nb",diff:1,cat:"待探索",ft:["梅花","轻松","春季限定","古村"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波奉化方向的春季限定梅花路线！新建村以梅花闻名，赏梅最佳时期2月下旬，花期约1个月。6km/300m轻松适合亲子踏春赏梅。",
+   season:"春季限定（2月下旬-3月中旬梅花季）",
+   note:"车程1.5-1.8h。梅花季人多建议工作日",
+   url:""},
+  {n:"四明山森林公园-平坑环线",d:"7km",cl:"150m+",a:"宁波余姚",ct:"nb",diff:1,cat:"待探索",ft:["森林","水杉","红枫","轻松"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波余姚四明山森林公园内环线，途经水杉林和红枫区。7km/150m+轻松适合亲子，森林公园步道完善，环境清幽。",
+   season:"秋季最佳（红枫+水杉变色），春夏绿意盎然",
+   note:"车程1.5-1.8h。森林公园内设施较完善",
+   url:""},
+  {n:"象坎-韩岭环线",d:"7km",cl:"300m+",a:"宁波鄞州",ct:"nb",diff:2,cat:"待探索",ft:["湖景","轻松","半山半水"],car:"1.5h",st:"new",s:true,
+   intro:"宁波鄞州方向的湖景环线，途经象坎和韩岭，可观赏东钱湖景。半山半水的路线设计，7km/300m+适合有一定基础的亲子。",
+   season:"四季皆宜，春秋最佳",
+   note:"车程约1.5h。东钱湖周边风景好",
+   url:""},
+  {n:"东盘山小环线",d:"7km",cl:"约700m",a:"宁波鄞州",ct:"nb",diff:3,cat:"待探索",ft:["高山草甸","野路","山脊","芦苇"],car:"1.5h",st:"new",s:false,
+   intro:"宁波鄞州方向的小众山脊线！近峰远山视野开阔，高山草甸和漫山芦苇是亮点。7km/700m有一定强度，但风景值得。",
+   season:"秋季最佳（芦苇金黄），春夏绿意",
+   note:"车程约1.5h。700m爬升对亲子有一定挑战",
+   url:""},
+  {n:"余姚茭湖古道",d:"7.5km",cl:"400m+",a:"宁波余姚",ct:"nb",diff:2,cat:"待探索",ft:["古道","竹林","茶园","古村"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波余姚方向的古道线，途经冠佩村千年古树，穿越竹林和茶园古道。7.5km/400m+适合有一定基础的亲子，人文自然兼顾。",
+   season:"四季皆宜，春秋最美",
+   note:"车程1.5-1.8h。冠佩村古村可停留",
+   url:""},
+  {n:"梅山湾环线",d:"8km",cl:"100m+",a:"宁波北仑",ct:"nb",diff:1,cat:"待探索",ft:["海景","沙滩","轻松","日落"],car:"2h+",st:"new",s:true,
+   intro:"宁波北仑方向的海景线！途经洋沙山砂石海滩，梅山湾海景可观赏日落。8km/100m+极轻松，适合亲子海边轻徒步。",
+   season:"夏秋最佳（海边凉爽+日落），春秋也可",
+   note:"车程2h+较远。海边注意防晒",
+   url:""},
+  {n:"福泉山亲子小环线",d:"约8km",cl:"200m+",a:"宁波鄞州",ct:"nb",diff:1,cat:"待探索",ft:["亲子","水库","竹林","茶园"],car:"1.5h",st:"new",s:true,
+   intro:"宁波鄞州方向的亲子友好线，途经龙潭水库、竹林和茶园。约8km/200m+轻松适合亲子，环境清幽空气好。",
+   season:"四季皆宜",
+   note:"车程约1.5h。亲子友好度高",
+   url:""},
+  {n:"北山游步道-小灵峰寺",d:"8km",cl:"300m+",a:"宁波江北",ct:"nb",diff:2,cat:"待探索",ft:["寺庙","步道","城市山","轻松"],car:"1.5h",st:"new",s:true,
+   intro:"宁波江北方向的城市山线，途经苏湖公园、小灵峰寺和北山游步道。8km/300m+适合有一定基础的亲子，步道完善好走。",
+   season:"四季皆宜",
+   note:"车程约1.5h。小灵峰寺可休息",
+   url:""},
+  {n:"宁海·龙宫村环线",d:"8km",cl:"300m+",a:"宁波宁海",ct:"nb",diff:2,cat:"待探索",ft:["溯溪","古村","亲子","轻松"],car:"2h+",st:"new",s:true,
+   intro:"宁波宁海方向的亲子溯溪线！途经龙宫村，溯溪玩水，沿途有龙树、龙桥、龙瀑、龙潭。名字里带'龙'的地方很多，趣味性强。8km/300m+适合亲子。",
+   season:"夏季最佳（溯溪玩水），春秋也可",
+   note:"车程2h+较远。夏天溯溪带好换洗衣物",
+   url:""},
+  {n:"画龙村-硖石岭古道",d:"8km+",cl:"300m+",a:"宁波鄞州",ct:"nb",diff:2,cat:"待探索",ft:["古道","稻田","秋季","古村"],car:"1.5h",st:"new",s:true,
+   intro:"宁波鄞州方向的古道线，途经画龙村和硖石岭古道。秋季金色稻田是最大亮点，古村秋色也很美。8km+/300m+适合有一定基础的亲子。",
+   season:"秋季最佳（金色稻田），春夏绿意",
+   note:"车程约1.5h。秋季稻田季人多",
+   url:""},
+  {n:"上王岗古道",d:"8km+",cl:"约350m",a:"宁波余姚",ct:"nb",diff:2,cat:"待探索",ft:["溯溪","古道","轻松","古村"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波余姚方向的古道+溯溪线，途经上王岗古道、上南黄村和白龙潭岙。夏天可以溯溪玩水，春秋走古道赏景。8km+/350m适合有一定基础的亲子。",
+   season:"夏季溯溪最佳，春秋古道赏景",
+   note:"车程1.5-1.8h。夏天带好溯溪装备",
+   url:""},
+  {n:"毛岙村-秦山村环线",d:"8km",cl:"400m+",a:"宁波江北",ct:"nb",diff:2,cat:"待探索",ft:["古村","茶园","山景","轻松"],car:"1.5h",st:"new",s:true,
+   intro:"宁波江北方向的山村环线，途经毛岙村、秦山村和高山茶园。8km/400m+适合有一定基础的亲子，山村田园风光不错。",
+   season:"春季采茶季最佳，秋季也可",
+   note:"车程约1.5h。春季茶园绿意盎然",
+   url:""},
+  {n:"方家河头-桃花岭古道",d:"8km",cl:"400m+",a:"宁波慈溪",ct:"nb",diff:2,cat:"待探索",ft:["古道","古村","桃花","秋季"],car:"1.5h",st:"new",s:true,
+   intro:"宁波慈溪方向的古道线，途经方家河村（柿子）和桃花岭古道。春季桃花盛开，秋季柿子成熟+古村秋色。8km/400m+适合有一定基础的亲子。",
+   season:"春季（桃花）和秋季（柿子+秋色）最佳",
+   note:"车程约1.5h。与方家河头亲子小环线（5km）为同区域不同走法",
+   url:""},
+  {n:"拜祭岭古道-钱湖秘境环线",d:"9km",cl:"200m+",a:"宁波鄞州",ct:"nb",diff:2,cat:"待探索",ft:["古道","湖景","秘境","轻松"],car:"1.5h",st:"new",s:true,
+   intro:"宁波鄞州方向的湖景古道线，途经拜祭岭牌坊和钱湖秘境。9km/200m+爬升温和，钱湖风景清幽，'秘境'感拉满。",
+   season:"四季皆宜，春秋最佳",
+   note:"车程约1.5h。东钱湖秘境段人少景美",
+   url:""},
+  {n:"龙鹫步道",d:"9km+",cl:"约400m",a:"宁波鄞州",ct:"nb",diff:2,cat:"待探索",ft:["步道","海角石","营地","山景"],car:"1.5h",st:"new",s:true,
+   intro:"宁波鄞州方向的步道线，途经海角石和南山自然营地。9km+/400m+适合有一定基础的亲子，步道体验好，营地可休息。",
+   season:"四季皆宜",
+   note:"车程约1.5h。步道较完善",
+   url:""},
+  {n:"虾蜡古道-龙潭环线",d:"9km",cl:"400m+",a:"宁波北仑",ct:"nb",diff:2,cat:"待探索",ft:["古道","风车","龙潭","山景"],car:"2h+",st:"new",s:true,
+   intro:"宁波北仑方向的古道线，途经虾蜡古道和风车公路，终点龙潭。9km/400m+适合有一定基础的亲子，风车公路拍照出片。",
+   season:"四季皆宜，春秋最美",
+   note:"车程2h+较远。风车公路注意交通安全",
+   url:""},
+  {n:"八大坑-九峰山环线",d:"9km+",cl:"约500m",a:"宁波北仑",ct:"nb",diff:3,cat:"待探索",ft:["山景","瀑布","九峰","野路"],car:"2h+",st:"new",s:false,
+   intro:"宁波北仑方向的九峰山环线，途经八大坑和九峰之巅，终点龙潭飞瀑。9km+/500m+有一定强度，九峰山风景壮丽。",
+   season:"夏秋最佳（瀑布水量大），春秋也可",
+   note:"车程2h+较远。500m+爬升对亲子有一定挑战",
+   url:""},
+  {n:"浙东小九寨-许家古道环线",d:"9km+",cl:"500m+",a:"宁波余姚",ct:"nb",diff:3,cat:"待探索",ft:["溪流","瀑布","古道","景区"],car:"1.5-1.8h",st:"new",s:true,
+   intro:"宁波余姚方向的景区+古道线，途经浙东小九寨景区（白岩飞瀑、白岩龙潭）和许家古道（红色古道）。9km+/500m+适合有一定基础的亲子，景区段设施完善。",
+   season:"夏秋最佳（瀑布溪流），春秋也可",
+   note:"车程1.5-1.8h。小九寨景区需门票",
+   url:""},
+  {n:"蝴蝶岭古道-商量岗环线",d:"9.5km",cl:"500m+",a:"宁波奉化",ct:"nb",diff:3,cat:"待探索",ft:["古道","红枫","秋季","山景"],car:"1.5-1.8h",st:"new",s:false,
+   intro:"宁波奉化方向的赏秋古道线，途经蝴蝶岭古道和商量岗。秋季红枫、黄枫、丛林、溪水、古道交替，颜值极高。9.5km/500m+适合有一定基础的亲子。",
+   season:"秋季最佳（红枫黄叶），春夏绿意",
+   note:"车程1.5-1.8h。秋季赏枫季人多",
+   url:""},
+];
+
+// ========== AGE TO DIFFICULTY ==========
+function getMaxDifficulty(age) { if (age<=5) return 2; if (age<=7) return 2; if (age<=9) return 3; if (age<=12) return 4; return 5; }
+function getMaxDistance(age) { if (age<=5) return 8; if (age<=7) return 10; if (age<=9) return 13; if (age<=12) return 15; return 99; }
+function getMaxClimb(age) { if (age<=5) return 500; if (age<=7) return 650; if (age<=9) return 800; if (age<=12) return 1100; return 9999; }
+
+const prefToKeywords = {
+  water:["溯溪","玩水","瀑布","溪流","水战"],
+  wild:["野路","攀石","攀爬","高强度"],
+  easy:["轻松","平路","景区","骑行"],
+  culture:["古道","历史","禅寺","民国"],
+  view:["山脊","视野","湖景","全景"],
+  forest:["森林","竹林","古树","茶园"],
+};
+
+let selectedAge=7,activePrefs=new Set(),activeFlags=new Set(),activeCity="";
+
+function init(){
+  document.getElementById('ageSlider').addEventListener('input',e=>{selectedAge=parseInt(e.target.value);updateAgeUI();filter();});
+  document.getElementById('ageTags').addEventListener('click',e=>{
+    const t=e.target; if(!t.classList.contains('age-tag'))return;
+    const r=t.dataset.age;
+    if(r==='3-5')selectedAge=4;else if(r==='5-7')selectedAge=6;else if(r==='7-9')selectedAge=8;else if(r==='9-12')selectedAge=10;else selectedAge=13;
+    document.getElementById('ageSlider').value=selectedAge;updateAgeUI();filter();
+  });
+  document.getElementById('prefChips').addEventListener('click',e=>{
+    const c=e.target.closest('.chip');if(!c)return;const p=c.dataset.pref;
+    activePrefs.has(p)?activePrefs.delete(p):activePrefs.add(p);c.classList.toggle('active');filter();
+  });
+  document.getElementById('cityChips').addEventListener('click',e=>{
+    const c=e.target.closest('.chip');if(!c)return;
+    activeCity=c.dataset.city;
+    document.querySelectorAll('#cityChips .chip').forEach(ch=>ch.classList.toggle('active',ch.dataset.city===activeCity));
+    filter();
+  });
+  document.getElementById('flagChips').addEventListener('click',e=>{
+    const c=e.target.closest('.chip');if(!c)return;const f=c.dataset.flag;
+    activeFlags.has(f)?activeFlags.delete(f):activeFlags.add(f);c.classList.toggle('active');filter();
+  });
+  updateAgeUI();updateSeasonBanner();filter();
+}
+
+function updateAgeUI(){
+  document.getElementById('ageSlider').value=selectedAge;
+  document.getElementById('ageBadge').textContent=selectedAge+' 岁';
+  document.querySelectorAll('.age-tag').forEach(t=>{const r=t.dataset.age;let a=false;
+    if(r==='3-5'&&selectedAge>=3&&selectedAge<=5)a=true;
+    else if(r==='5-7'&&selectedAge>=5&&selectedAge<=7)a=true;
+    else if(r==='7-9'&&selectedAge>=7&&selectedAge<=9)a=true;
+    else if(r==='9-12'&&selectedAge>=9&&selectedAge<=12)a=true;
+    else if(r==='12+'&&selectedAge>=12)a=true;
+    t.classList.toggle('active',a);
+  });
+}
+
+function updateSeasonBanner(){
+  const m=new Date().getMonth()+1,icon=document.getElementById('seasonIcon'),text=document.getElementById('seasonText');
+  if(m>=6&&m<=8){icon.textContent='🌊';text.textContent='盛夏溯溪季！推荐都林山、井空里、碧坞龙潭、壶源溪等玩水路线';}
+  else if(m>=9&&m<=11){icon.textContent='🍂';text.textContent='秋高气爽徒步黄金季！山脊线视野最佳，气温舒适适合长线';}
+  else if(m>=3&&m<=5){icon.textContent='🌸';text.textContent='春季山花烂漫！适合古道穿越和森林氧吧路线';}
+  else{icon.textContent='❄️';text.textContent='冬季注意保暖防滑！推荐低海拔城市山林和古道';}
+}
+
+function pc(s){const m=s.replace('~','').replace('m','').replace(',','').trim();if(m==='—'||m==='')return 0;return parseInt(m)||0;}
+function pd(s){let d=s.replace('km','').replace('~','').replace('约','').replace('+','').replace(',','').trim();if(d==='自驾线'||d==='轻徒'||d==='—')return 3;if(d.includes('-'))d=d.split('-')[1];return parseFloat(d)||3;}
+
+
+function mp(r){if(activePrefs.size===0)return true;for(const pref of activePrefs){const kw=prefToKeywords[pref]||[];if(kw.some(k=>r.ft.some(f=>f.includes(k))))return true;}return false;}
+function isNear(car){
+  let h=car.replace('h','').replace('—','').trim();
+  if(h===''||h==='—')return true;
+  if(h.includes('-'))h=h.split('-')[0];
+  let minutes=parseFloat(h)*60;
+  if(isNaN(minutes))return true;
+  return minutes<=60;
+}
+
+function filter(){
+  const maxDiff=getMaxDifficulty(selectedAge),maxDist=getMaxDistance(selectedAge),maxClimb=getMaxClimb(selectedAge);
+  let fl=routes.filter(r=>{
+    if(r.diff>maxDiff)return false;
+    if(pd(r.d)>maxDist)return false;
+    if(pc(r.cl)>maxClimb)return false;
+    if(!mp(r))return false;
+    if(activeCity!==''&&r.ct!==activeCity)return false;
+    if(activeFlags.has('done')&&r.st!=='done')return false;
+    if(activeFlags.has('new')&&r.st!=='new')return false;
+    if(activeFlags.has('near')&&!isNear(r.car))return false;
+    if(activeFlags.has('summer')&&!r.s)return false;
+    return true;
+  });
+  fl.sort((a,b)=>{if(activeFlags.has('done')){if(a.st==='done'&&b.st!=='done')return -1;if(a.st!=='done'&&b.st==='done')return 1;}else{if(a.st==='new'&&b.st!=='new')return -1;if(a.st!=='new'&&b.st==='new')return 1;}return a.diff-b.diff;});
+  renderResults(fl);
+}
+
+function diffLabel(d){
+  const stars='★'.repeat(d)+'☆'.repeat(5-d);
+  if(d<=2)return `<span class="difficulty diff-easy">${stars} 入门</span>`;
+  if(d<=3)return `<span class="difficulty diff-medium">${stars} 进阶</span>`;
+  return `<span class="difficulty diff-hard">${stars} 挑战</span>`;
+}
+
+function renderResults(routes){
+  const c=document.getElementById('results');
+  document.getElementById('matchCount').textContent=routes.length;
+  if(routes.length===0){c.innerHTML=`<div class="empty-state"><div class="icon">🔍</div><p>没有完全匹配的路线</p><p style="font-size:13px;margin-top:4px;">试试放宽筛选条件，或调高孩子年龄</p></div>`;return;}
+
+  c.innerHTML=routes.map((r,i)=>{
+    const diff=diffLabel(r.diff);
+    const tags=r.ft.map(f=>`<span class="tag${['溯溪','玩水','瀑布','溪流'].some(k=>f.includes(k))?' summer':''}">${f}</span>`).join('');
+    const badge=r.st==='new'?'<span class="badge-new">新路线</span>':'<span class="badge-done">已组织</span>';
+    const carWarn=(r.car.includes('1.8')||r.car.includes('2'))?'<span class="tag warn">车程较远</span>':'';
+    const urlHtml=r.url?`<a href="${r.url}" target="_blank" rel="noopener">查看路线原文 →</a>`:'';
+    return `<div class="route-card" data-idx="${i}" onclick="toggleCard(this)">
+  <div class="rtop">
+    <div>
+      <div class="name">${r.n}<span class="region">${r.a}</span>${badge}</div>
+      <div class="meta"><span>📏 ${r.d}</span><span>⛰️ ${r.cl}m</span><span>🚗 ${r.car}</span></div>
+    </div>
+    ${diff}
+  </div>
+  <div class="tags">${tags}${carWarn}</div>
+  <div class="expand-hint">点击查看详细介绍 ▼</div>
+  <div class="detail"><div class="detail-inner">
+    <div class="detail-row"><span class="dlbl">🌄 路线</span><span class="dval">${r.intro}</span></div>
+    <div class="detail-row"><span class="dlbl">📅 季节</span><span class="dval">${r.season}</span></div>
+    <div class="detail-row"><span class="dlbl">⚠️ 注意</span><span class="dval">${r.note}</span></div>
+    ${urlHtml?`<div class="detail-row"><span class="dlbl">🔗 来源</span><span class="dval">${urlHtml}</span></div>`:''}
+  </div></div>
+</div>`;
+  }).join('');
+}
+
+function toggleCard(card){
+  card.classList.toggle('expanded');
+  const hint=card.querySelector('.expand-hint');
+  hint.textContent=card.classList.contains('expanded')?'点击收起 ▲':'点击查看详细介绍 ▼';
+}
+
+init();
+</script>
+</body>
+</html>
